@@ -7,7 +7,6 @@
    "rules": {
       "typedef": [
          true,
-         "call-signature",
          "parameter",
          "member-variable-declaration"
       ],

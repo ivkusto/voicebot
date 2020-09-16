@@ -1,6 +1,13 @@
 import * as admin from 'firebase-admin';
+
+interface IUser extends FirebaseFirestore.DocumentData {
+   state?: string;
+   audio?: string;
+   sex?: 'm' | 'f';
+}
+export type TUserStore = FirebaseFirestore.DocumentSnapshot<IUser>;
 export class DB {
-   private _users: FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
+   private _users: FirebaseFirestore.CollectionReference<IUser>;
 
    async init(): Promise<DB> {
       const serviceAccount = await import(process.env.PATH_TO_KEY);
@@ -17,10 +24,15 @@ export class DB {
     * @param chatId
     * @param fileId
     */
-   saveUserVoice(chatId: string, fileId: string): void {
-      this._users.doc(chatId.toString()).set({
-         audio: fileId
-      });
+   saveUserData(chatId: string, data: IUser) {
+      return this._users.doc(chatId.toString()).set(data);
+   }
+
+   /**
+    * @param fileId
+    */
+   getUser(chatId: string): Promise<TUserStore> {
+      return this._users.doc(chatId.toString()).get();
    }
 
 }
