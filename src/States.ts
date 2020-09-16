@@ -24,7 +24,7 @@ export const STATES: IStates = {
    },
 
    setSex: {
-      next: 'setSex',
+      next: 'setTargetSex',
       need: ['voice'],
       messages: [
          'Укажите свой пол (м/ж/другой)!'
@@ -35,7 +35,26 @@ export const STATES: IStates = {
       field: 'sex',
       prev: 'setVoice'
    },
+   setTargetSex: {
+      next: 'getRandom',
+      need: ['sex'],
+      messages: [
+         'Укажите какой пол вам интересен (м/ж/другой)!'
+      ],
+      postMessages: ['Кайф!'],
+      typeErrMessages: ['Кажется кто-то хотел отправить мне пол (м/ж/другой)!'],
+      type: 'text',
+      field: 'targetSex',
+      prev: 'setSex'
+   },
    getRandom: {
+      next: 'getRandom',
+      messages: [
+         'Тут будет первая голосувуха!',
+         'Но пока ее нет, но скоро будет!',
+         'Или нет...',
+      ],
+
       need: ['voice'],
       type: 'text',
       prev: 'setVoice'
