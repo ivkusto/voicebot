@@ -25,14 +25,26 @@ export class DB {
     * @param fileId
     */
    saveUserData(chatId: string, data: IUser) {
-      return this._users.doc(chatId.toString()).set(data);
+      return this._users.doc(chatId).set(data, { merge: true });
+   }
+
+   removeUser(chatId: string) {
+      return this._users.doc(chatId).delete();
    }
 
    /**
     * @param fileId
     */
    getUser(chatId: string): Promise<TUserStore> {
-      return this._users.doc(chatId.toString()).get();
+      return this._users.doc(chatId).get();
+   }
+
+   async migrateToFake(chatId: string) {
+      const fakeId = 'f' + Number(new Date());
+      const userData = await this.getUser(chatId);
+      const userDataJson = userData.data();
+      await this.saveUserData(fakeId, userDataJson);
+      await this.removeUser(chatId);
    }
 
 }

@@ -1,6 +1,6 @@
-import { DB, TUserStore } from "./DB";
+import { DB, TUserStore } from "../DB";
 import TelegramBot from "node-telegram-bot-api";
-import { STATES } from "./States";
+import { STATES } from "./Dict";
 
 
 const MESSAGE_DELAY = 1000;
@@ -28,12 +28,17 @@ export class MessageController {
       }
       const writeData = { state: stateObj.next };
       if (stateObj.field) {
-         writeData[stateObj.field] = _getValueByType(message, stateObj.type);
+         const value = _getValueByType(message, stateObj.type);
+         writeData[stateObj.field] = stateObj.processValue
+            ? stateObj.processValue(value)
+            : value;
       }
 
       await this._db.saveUserData(chatId.toString(), writeData);
 
+      // сообщения после
       await this._printMessages(stateObj.postMessages, chatId);
+      // приветствие следующего статуса
       await this._printMessages(STATES[stateObj.next].messages, chatId);
    }
 

@@ -1,6 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { DB } from './src/DB';
-import { MessageController } from './src/MessageController';
+import { MessageController } from './src/state/MessageController';
 
 const token = process.env.TLGM_API_KEY;
 const bot = new TelegramBot(token, {
@@ -11,6 +11,11 @@ const bot = new TelegramBot(token, {
    const db = await new DB().init();
    const mc = new MessageController(db, bot);
    // текст
-   bot.on('message', (msg) => mc.messageHandler(msg));
+   bot.on('message', (msg) =>{
+       if (msg.text==='migrateToFake'){
+          return db.migrateToFake(msg.chat.id.toString());
+       }
+       mc.messageHandler(msg);
+   });
 })();
 

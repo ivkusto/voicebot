@@ -1,8 +1,12 @@
+import { getRandom } from "./Utils/Random";
+
 export const STATES: IStates = {
    start: {
       next: 'setVoice',
       need: [],
       type: 'text',
+      field: 'randomId',
+      processValue: getRandom,
       postMessages: [
          'Привет!',
          'Я бот Войсер!',
@@ -12,7 +16,7 @@ export const STATES: IStates = {
 
    setVoice: {
       next: 'setSex',
-      need: [],
+      need: ['randomId'],
       prev: 'start',
       messages: [
          'Отправьте мне голосовое сообщение, которое позволит другим войсерам с вами познакомиться!'
@@ -76,7 +80,9 @@ interface IState {
    postMessages?: string[];
    // ошибки при несоответствии типа
    typeErrMessages?: string[];
+   // поле в бд в которое записываем
    field?: string;
+   processValue?: (value: string) => string | number;
 }
 interface IStates {
    [state: string]: IState;
