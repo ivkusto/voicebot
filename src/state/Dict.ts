@@ -1,13 +1,14 @@
-import { getRandom } from "./Utils/Random";
-import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api";
-import { DB, TUserStore } from "../DB";
+
+import TelegramBot from "node-telegram-bot-api";
+import { genderButtons, callbackSerialize, callbackButtons } from "./Utils/KeyBoard";
 
 
 export const STATES: IStates = {
    start: {
       next: 'setVoice',
       need: [],
-      type: 'text',
+      type: 'chat',
+      field: 'username',
       postMessages: [
          'Привет!',
          'Я бот Войсер!',
@@ -34,14 +35,14 @@ export const STATES: IStates = {
       messages: [
          {
             text: 'Укажите свой пол!',
-            options: _genderButtons('setSex')
+            options: genderButtons('setSex')
          }
       ],
       postMessages: ['Четко!'],
       typeErrMessages: [
          {
             text: 'Кажется кто-то хотел отправить мне пол!',
-            options: _genderButtons('setSex')
+            options: genderButtons('setSex')
          }
       ],
       type: 'text',
@@ -54,14 +55,14 @@ export const STATES: IStates = {
       messages: [
          {
             text: 'Укажите какой пол вам интересен!',
-            options: _genderButtons('setTargetSex')
+            options: genderButtons('setTargetSex')
          }
       ],
       postMessages: ['Кайф!'],
       typeErrMessages: [
          {
             text: 'Кажется кто-то хотел отправить мне пол который ему интересен!',
-            options: _genderButtons('setTargetSex')
+            options: genderButtons('setTargetSex')
          }
       ],
       type: 'text',
@@ -88,6 +89,22 @@ export const STATES: IStates = {
       need: ['targetSex'],
       prev: 'getRandom',
       customHandler: true
+   },
+
+   answerMode: {
+      field: 'userForAnswer',
+      prev: 'getRandom',
+      need: [],
+      postMessages: ['Отправьте голосовое сообщение в ответ'],
+      next: 'waitForAnswer'
+   },
+
+   waitForAnswer: {
+      customHandler: true,
+      need: [],
+      type: 'voice',
+      prev: 'getRandom',
+      typeErrMessages: ['Отправьте голосовое сообщение в ответ']
    }
 };
 
@@ -116,34 +133,4 @@ interface IStates {
    [state: string]: IState;
 }
 
-function callbackSerialize(state: string, value: unknown) {
-   return JSON.stringify({ state, value });
-}
-
-function _genderButtons(state: string) {
-   return callbackButtons(
-      [
-         {
-            text: "М",
-            callback_data: callbackSerialize(state, 'm'),
-         },
-         {
-            text: "Ж",
-            callback_data: callbackSerialize(state, 'f'),
-         },
-         {
-            text: "Другой",
-            callback_data: callbackSerialize(state, 'o'),
-         },
-      ]);
-}
-function callbackButtons(buttons: InlineKeyboardButton[]) {
-   return {
-      "reply_markup": {
-         "inline_keyboard": [
-            buttons
-         ]
-      }
-   };
-}
 export type TMessage = string | { text: string, options: TelegramBot.SendMessageOptions };

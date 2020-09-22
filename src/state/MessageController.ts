@@ -1,6 +1,7 @@
 import { DB, TUserStore } from "../DB";
 import TelegramBot from "node-telegram-bot-api";
 import { STATES, TMessage } from "./Dict";
+import { callbackButtons, callbackSerialize } from "./Utils/KeyBoard";
 
 
 const MESSAGE_DELAY = 1000;
@@ -28,14 +29,15 @@ export class MessageController {
    async _processState(user: TUserStore, state: string, message: TelegramBot.Message, preValue?: string) {
       const stateObj = STATES[state];
       const chatId = message.chat.id;
-      if (stateObj.customHandler) {
-         return this[state](chatId.toString(), message);
-      }
       // некоректный тип
-      if (!message[stateObj.type]) {
+      if (!preValue && stateObj.type && !message[stateObj.type]) {
          return this._printMessages(stateObj.typeErrMessages, chatId);
       }
-      // if (!stateObj.isRead) {
+      if (stateObj.customHandler) {
+         return this[state](chatId, message, user);
+      }
+
+
       const writeData = { state: stateObj.next };
       if (stateObj.field) {
          const value = preValue || _getValueByType(message, stateObj.type);
@@ -67,10 +69,29 @@ export class MessageController {
       }
    }
 
-   private async getRandom(chatId: string, message: TelegramBot.Message) {
-      const randomUser = await this._db.getRandom(chatId);
+   private async getRandom(chatId: number, message: TelegramBot.Message) {
+      const randomUser = await this._db.getRandom(chatId.toString());
       const audio = randomUser.get('audio');
-      this._bot.sendVoice(chatId, audio);
+      this._bot.sendVoice(chatId, audio,
+         callbackButtons([
+            {
+               text: 'Ответить',
+               callback_data: callbackSerialize('answerMode', randomUser.id)
+            },
+            {
+               text: 'Дальше',
+               callback_data: callbackSerialize('getRandom', null)
+            }
+         ])
+      );
+   }
+
+   private waitForAnswer(chatId: number, message: TelegramBot.Message, user: TUserStore) {
+      this._printMessages(['Ваш ответ доставлен'], chatId);
+      this._db.saveUserData(chatId.toString(), { userForAnswer: null, state: 'getRandom' });
+      const targetUserId = user.get('userForAnswer');
+      this._printMessages([`Вам ответил пользователь @${user.get('username')}`], targetUserId);
+      this._bot.sendVoice(targetUserId, message.voice.file_id);
    }
 }
 
@@ -86,6 +107,7 @@ function _getValueByType(msg: TelegramBot.Message, type: string) {
    switch (type) {
       case 'text': return msg.text;
       case 'voice': return msg.voice.file_id;
+      case 'chat': return msg.chat.username;
    }
    return null;
 }

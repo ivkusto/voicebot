@@ -4,6 +4,8 @@ interface IUser extends FirebaseFirestore.DocumentData {
    state?: string;
    audio?: string;
    sex?: 'm' | 'f';
+   userForAnswer?: string;
+   username?: string;
 }
 export type TUserStore = FirebaseFirestore.DocumentSnapshot<IUser>;
 export class DB {
@@ -56,7 +58,7 @@ export class DB {
 
    async getRandom(chatId: string): Promise<TUserStore> {
       const count = await this.getCount();
-      const rand = Math.floor(Math.random() * (count - 1));
+      const rand = Math.floor(Math.random() * (count));
       const randUser = await this._users.orderBy('sex').offset(rand).limit(2)
          // .where('sex', '==', chatId)
          // .where(admin.firestore.FieldPath.documentId(), '>', chatId)
