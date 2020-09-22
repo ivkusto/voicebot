@@ -62,10 +62,8 @@ export class DB {
 
    async getRandom(chatId: string): Promise<TUserStore> {
       const count = await this.getCount();
-      const rand = Math.floor(Math.random() * (count));
-      const randUser = await this._users.orderBy('sex').offset(rand).limit(2)
-         // .where('sex', '==', chatId)
-         // .where(admin.firestore.FieldPath.documentId(), '>', chatId)
+      const rand = Math.floor(Math.random() * (count - 1));
+      const randUser = await this._users.orderBy('username').offset(rand).limit(2)
          .get();
 
       return randUser.docs.filter(doc => doc.id !== chatId)[0];
