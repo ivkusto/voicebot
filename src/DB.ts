@@ -13,9 +13,13 @@ export class DB {
    private _counters: FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
 
    async init(): Promise<DB> {
-      const serviceAccount = await import(process.env.PATH_TO_KEY);
       admin.initializeApp({
-         credential: admin.credential.cert(serviceAccount),
+         credential: admin.credential.cert(
+            {
+               "privateKey": process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+               "clientEmail": process.env.FIREBASE_CLIENT_EMAIL,
+               "projectId": process.env.FIREBASE_PROJECT_ID
+            }),
          databaseURL: process.env.DB_URL
       });
       const db = admin.firestore();
