@@ -8,6 +8,7 @@ interface IUser extends FirebaseFirestore.DocumentData {
 export type TUserStore = FirebaseFirestore.DocumentSnapshot<IUser>;
 export class DB {
    private _users: FirebaseFirestore.CollectionReference<IUser>;
+   private _counters: FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
 
    async init(): Promise<DB> {
       const serviceAccount = await import(process.env.PATH_TO_KEY);
@@ -17,6 +18,7 @@ export class DB {
       });
       const db = admin.firestore();
       this._users = db.collection('users');
+      this._counters = db.collection('counters');
       return this;
    }
 
@@ -24,7 +26,12 @@ export class DB {
     * @param chatId
     * @param fileId
     */
-   saveUserData(chatId: string, data: IUser) {
+   saveUserData(chatId: string, data: IUser, isNew = false) {
+      if (isNew) {
+         this._counters
+            .doc('users')
+            .update({ count: admin.firestore.FieldValue.increment(1) });
+      }
       return this._users.doc(chatId).set(data, { merge: true });
    }
 
@@ -45,6 +52,22 @@ export class DB {
       const userDataJson = userData.data();
       await this.saveUserData(fakeId, userDataJson);
       await this.removeUser(chatId);
+   }
+
+   async getRandom(chatId: string): Promise<TUserStore> {
+      const count = await this.getCount();
+      const rand = Math.floor(Math.random() * (count - 1));
+      const randUser = await this._users.orderBy('sex').offset(rand).limit(2)
+         // .where('sex', '==', chatId)
+         // .where(admin.firestore.FieldPath.documentId(), '>', chatId)
+         .get();
+
+      return randUser.docs.filter(doc => doc.id !== chatId)[0];
+   }
+
+   async getCount() {
+      const countObj = await this._counters.doc('users').get();
+      return countObj.get('count');
    }
 
 }

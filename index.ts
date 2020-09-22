@@ -11,11 +11,14 @@ const bot = new TelegramBot(token, {
    const db = await new DB().init();
    const mc = new MessageController(db, bot);
    // текст
-   bot.on('message', (msg) =>{
-       if (msg.text==='migrateToFake'){
-          return db.migrateToFake(msg.chat.id.toString());
-       }
-       mc.messageHandler(msg);
+   bot.on('message', (msg) => {
+      if (msg.text === 'migrateToFake') {
+         return db.migrateToFake(msg.chat.id.toString());
+      }
+      mc.messageHandler(msg);
+   });
+   bot.on('callback_query', (msg) => {
+      mc.callbackHandler(msg);
    });
 })();
 

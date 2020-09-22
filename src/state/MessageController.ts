@@ -1,6 +1,6 @@
 import { DB, TUserStore } from "../DB";
 import TelegramBot from "node-telegram-bot-api";
-import { STATES } from "./Dict";
+import { STATES, TMessage } from "./Dict";
 
 
 const MESSAGE_DELAY = 1000;
@@ -19,22 +19,32 @@ export class MessageController {
       this._processState(user, state, message);
    }
 
-   async _processState(user: TUserStore, state: string, message: TelegramBot.Message) {
+   async callbackHandler(msg: TelegramBot.CallbackQuery) {
+      const { state, value } = JSON.parse(msg.data);
+      const user = await this._db.getUser(msg.message.chat.id.toString());
+      this._processState(user, state, msg.message, value);
+   }
+
+   async _processState(user: TUserStore, state: string, message: TelegramBot.Message, preValue?: string) {
       const stateObj = STATES[state];
       const chatId = message.chat.id;
+      if (stateObj.customHandler) {
+         return this[state](chatId.toString(), message);
+      }
       // некоректный тип
       if (!message[stateObj.type]) {
          return this._printMessages(stateObj.typeErrMessages, chatId);
       }
+      // if (!stateObj.isRead) {
       const writeData = { state: stateObj.next };
       if (stateObj.field) {
-         const value = _getValueByType(message, stateObj.type);
+         const value = preValue || _getValueByType(message, stateObj.type);
          writeData[stateObj.field] = stateObj.processValue
             ? stateObj.processValue(value)
             : value;
       }
 
-      await this._db.saveUserData(chatId.toString(), writeData);
+      await this._db.saveUserData(chatId.toString(), writeData, !user.exists);
 
       // сообщения после
       await this._printMessages(stateObj.postMessages, chatId);
@@ -42,14 +52,25 @@ export class MessageController {
       await this._printMessages(STATES[stateObj.next].messages, chatId);
    }
 
-   private async _printMessages(msgs: string[], chatId: number) {
+   private async _printMessages(msgs: TMessage[], chatId: number) {
       if (!msgs) {
          return;
       }
       for (const msg of msgs) {
-         this._bot.sendMessage(chatId, msg);
+         if (typeof msg === 'string') {
+            this._bot.sendMessage(chatId, msg);
+         } else {
+            this._bot.sendMessage(chatId, msg.text, msg.options);
+         }
+
          await delay(MESSAGE_DELAY);
       }
+   }
+
+   private async getRandom(chatId: string, message: TelegramBot.Message) {
+      const randomUser = await this._db.getRandom(chatId);
+      const audio = randomUser.get('audio');
+      this._bot.sendVoice(chatId, audio);
    }
 }
 

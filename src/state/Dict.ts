@@ -1,22 +1,23 @@
 import { getRandom } from "./Utils/Random";
+import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api";
+import { DB, TUserStore } from "../DB";
+
 
 export const STATES: IStates = {
    start: {
       next: 'setVoice',
       need: [],
       type: 'text',
-      field: 'randomId',
-      processValue: getRandom,
       postMessages: [
          'Привет!',
          'Я бот Войсер!',
-         `Тут вы можете знакомиться с другими людьми прослушивая их голосовые сообщения!`
+         `Тут вы можете знакомиться с другими людьми, прослушивая их голосовые сообщения!`
       ]
    },
 
    setVoice: {
       next: 'setSex',
-      need: ['randomId'],
+      need: [],
       prev: 'start',
       messages: [
          'Отправьте мне голосовое сообщение, которое позволит другим войсерам с вами познакомиться!'
@@ -31,37 +32,62 @@ export const STATES: IStates = {
       next: 'setTargetSex',
       need: ['voice'],
       messages: [
-         'Укажите свой пол (м/ж/другой)!'
+         {
+            text: 'Укажите свой пол!',
+            options: _genderButtons('setSex')
+         }
       ],
       postMessages: ['Четко!'],
-      typeErrMessages: ['Кажется кто-то хотел отправить мне пол (м/ж/другой)!'],
+      typeErrMessages: [
+         {
+            text: 'Кажется кто-то хотел отправить мне пол!',
+            options: _genderButtons('setSex')
+         }
+      ],
       type: 'text',
       field: 'sex',
       prev: 'setVoice'
    },
    setTargetSex: {
-      next: 'getRandom',
+      next: 'readyforChat',
       need: ['sex'],
       messages: [
-         'Укажите какой пол вам интересен (м/ж/другой)!'
+         {
+            text: 'Укажите какой пол вам интересен!',
+            options: _genderButtons('setTargetSex')
+         }
       ],
       postMessages: ['Кайф!'],
-      typeErrMessages: ['Кажется кто-то хотел отправить мне пол (м/ж/другой)!'],
+      typeErrMessages: [
+         {
+            text: 'Кажется кто-то хотел отправить мне пол который ему интересен!',
+            options: _genderButtons('setTargetSex')
+         }
+      ],
       type: 'text',
       field: 'targetSex',
       prev: 'setSex'
    },
-   getRandom: {
+   readyforChat: {
       next: 'getRandom',
+      need: ['targetSex'],
       messages: [
-         'Тут будет первая голосувуха!',
-         'Но пока ее нет, но скоро будет!',
-         'Или нет...',
+         {
+            text: 'Теперь можно получить первую голосовуху!',
+            options: callbackButtons([{
+               text: 'Получить голосовуху',
+               callback_data: callbackSerialize('getRandom', null)
+            }])
+         }
       ],
-
-      need: ['voice'],
       type: 'text',
       prev: 'setVoice'
+   },
+   getRandom: {
+      next: 'getRandom',
+      need: ['targetSex'],
+      prev: 'getRandom',
+      customHandler: true
    }
 };
 
@@ -73,17 +99,51 @@ interface IState {
    // предыдущий статус
    prev?: string;
    // сообщения которые нужно вывести перед переходом в статус
-   messages?: string[];
+   messages?: TMessage[];
    // тип ожидаемого сообщения
-   type: string;
+   type?: string;
    // сообщения после обработки статуса
-   postMessages?: string[];
+   postMessages?: TMessage[];
    // ошибки при несоответствии типа
-   typeErrMessages?: string[];
+   typeErrMessages?: TMessage[];
    // поле в бд в которое записываем
    field?: string;
    processValue?: (value: string) => string | number;
+   customHandler?: boolean;
+
 }
 interface IStates {
    [state: string]: IState;
 }
+
+function callbackSerialize(state: string, value: unknown) {
+   return JSON.stringify({ state, value });
+}
+
+function _genderButtons(state: string) {
+   return callbackButtons(
+      [
+         {
+            text: "М",
+            callback_data: callbackSerialize(state, 'm'),
+         },
+         {
+            text: "Ж",
+            callback_data: callbackSerialize(state, 'f'),
+         },
+         {
+            text: "Другой",
+            callback_data: callbackSerialize(state, 'o'),
+         },
+      ]);
+}
+function callbackButtons(buttons: InlineKeyboardButton[]) {
+   return {
+      "reply_markup": {
+         "inline_keyboard": [
+            buttons
+         ]
+      }
+   };
+}
+export type TMessage = string | { text: string, options: TelegramBot.SendMessageOptions };
