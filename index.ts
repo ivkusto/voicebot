@@ -1,10 +1,14 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { DB } from './src/DB';
 import { MessageController } from './src/state/MessageController';
+import * as https from 'https';
 
 const token = process.env.TLGM_API_KEY;
 const bot = new TelegramBot(token, {
    polling: true
+});
+https.createServer().listen(process.env.PORT || 5000).on('request', (req, res) => {
+   res.end('');
 });
 
 (async () => {
